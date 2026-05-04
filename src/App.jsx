@@ -33,22 +33,9 @@ function App() {
     }
   };
 
-  // ✅ DELETE
-  const deleteTransaction = async (id) => {
-    const confirmDelete = window.confirm("you sure want to delete this?");
-    if (!confirmDelete) return;
-
-    try {
-      await axios.delete(`http://127.0.0.1:8000/api/transactions/${id}/`);
-      fetchTransactions(); // refresh after delete
-    } catch (err) {
-      console.log(err);
-      alert("Error deleting transaction");
-    }
-  };
-
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
+  // ✅ TOTAL
   const totalExpenses = transactions.reduce(
     (total, item) => total + Number(item.amount),
     0
@@ -56,6 +43,22 @@ function App() {
 
   const remainingBudget = BUDGET - totalExpenses;
   const isOverBudget = remainingBudget <= 0;
+
+  // 🔥 FIXED PIE CHART DATA (IMPORTANT)
+  const summary = [
+    {
+      name: "Income",
+      value: transactions
+        .filter((t) => t.type?.toLowerCase() === "income")
+        .reduce((sum, t) => sum + Number(t.amount), 0),
+    },
+    {
+      name: "Expense",
+      value: transactions
+        .filter((t) => t.type?.toLowerCase() === "expense")
+        .reduce((sum, t) => sum + Number(t.amount), 0),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100 p-5">
@@ -69,21 +72,11 @@ function App() {
             e.preventDefault();
 
             const title = e.target.title.value.trim();
-            const category = e.target.category.value.trim();
+            const type = e.target.type.value;
             const amount = Number(e.target.amount.value);
 
-            if (!title || !category || !amount) {
+            if (!title || !type || !amount) {
               alert("Please fill in all fields!");
-              return;
-            }
-
-            if (amount <= 0) {
-              alert("Amount must be greater than 0");
-              return;
-            }
-
-            if (totalExpenses + amount > BUDGET) {
-              alert("Your Budget is Limit, You're Not Enough");
               return;
             }
 
@@ -92,15 +85,15 @@ function App() {
                 "http://127.0.0.1:8000/api/transactions/",
                 {
                   title,
-                  category,
                   amount,
+                  type,
                 }
               );
 
-              fetchTransactions(); // refresh after add
+              fetchTransactions();
               e.target.reset();
             } catch (err) {
-              console.log(err);
+              console.log(err.response?.data);
               alert("Error saving transaction");
             }
           }}
@@ -113,12 +106,11 @@ function App() {
             className="border p-2 rounded w-full"
           />
 
-          <input
-            type="text"
-            name="category"
-            placeholder="Category"
-            className="border p-2 rounded w-full"
-          />
+          <select name="type" className="border p-2 rounded w-full">
+            <option value="">Select Type</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
 
           <input
             type="number"
@@ -154,9 +146,7 @@ function App() {
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-gray-500">Budget Remaining</h2>
 
-          <p className="text-2xl font-bold">
-            ₱ {remainingBudget}
-          </p>
+          <p className="text-2xl font-bold">₱ {remainingBudget}</p>
 
           <p className="text-sm text-gray-400">
             Total Budget: ₱ {BUDGET}
@@ -172,22 +162,23 @@ function App() {
       {/* CHARTS */}
       <div className="grid grid-cols-2 gap-5 mb-6">
 
+        {/* PIE CHART FIXED */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
-            Expenses Pie Chart
+            Income vs Expense
           </h2>
 
           <PieChart width={400} height={300}>
             <Pie
-              data={transactions}
-              dataKey="amount"
-              nameKey="category"
+              data={summary}
+              dataKey="value"
+              nameKey="name"
               cx="50%"
               cy="50%"
               outerRadius={100}
               label
             >
-              {transactions.map((_, index) => (
+              {summary.map((_, index) => (
                 <Cell
                   key={index}
                   fill={COLORS[index % COLORS.length]}
@@ -199,14 +190,15 @@ function App() {
           </PieChart>
         </div>
 
+        {/* BAR CHART */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
-            Monthly Expenses
+            Expenses by Type
           </h2>
 
           <BarChart width={500} height={300} data={transactions}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="category" />
+            <XAxis dataKey="type" />
             <YAxis />
             <Tooltip />
             <Legend />
@@ -226,9 +218,8 @@ function App() {
           <thead>
             <tr className="border-b">
               <th className="text-left p-2">Title</th>
-              <th className="text-left p-2">Category</th>
+              <th className="text-left p-2">Type</th>
               <th className="text-left p-2">Amount</th>
-              <th className="text-left p-2">Action</th>
             </tr>
           </thead>
 
@@ -236,16 +227,8 @@ function App() {
             {transactions.map((item) => (
               <tr key={item.id} className="border-b">
                 <td className="p-2">{item.title}</td>
-                <td className="p-2">{item.category}</td>
+                <td className="p-2">{item.type}</td>
                 <td className="p-2">₱ {item.amount}</td>
-                <td className="p-2">
-                  <button
-                    onClick={() => deleteTransaction(item.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>
