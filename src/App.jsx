@@ -20,27 +20,41 @@ function App() {
   const BUDGET = 50000;
 
   useEffect(() => {
-    axios
-      .get("http://127.0.0.1:8000/api/transactions/")
-      .then((res) => {
-        setTransactions(res.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    fetchTransactions();
   }, []);
+
+  // ✅ FETCH
+  const fetchTransactions = async () => {
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/api/transactions/");
+      setTransactions(res.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  // ✅ DELETE
+  const deleteTransaction = async (id) => {
+    const confirmDelete = window.confirm("you sure want to delete this?");
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/transactions/${id}/`);
+      fetchTransactions(); // refresh after delete
+    } catch (err) {
+      console.log(err);
+      alert("Error deleting transaction");
+    }
+  };
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-  // 💸 TOTAL EXPENSES
   const totalExpenses = transactions.reduce(
     (total, item) => total + Number(item.amount),
     0
   );
 
-  // 💰 REMAINING BUDGET (THIS IS WHAT YOU WANTED)
   const remainingBudget = BUDGET - totalExpenses;
-
   const isOverBudget = remainingBudget <= 0;
 
   return (
@@ -51,26 +65,44 @@ function App() {
         <h2 className="text-xl font-bold mb-3">Add Transaction</h2>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
 
+            const title = e.target.title.value.trim();
+            const category = e.target.category.value.trim();
             const amount = Number(e.target.amount.value);
 
-
-            if (totalExpenses + amount > BUDGET) {
-              alert("Your Budget is Limit, Youre Not Enough");
+            if (!title || !category || !amount) {
+              alert("Please fill in all fields!");
               return;
             }
 
-            const newTransaction = {
-              id: transactions.length + 1,
-              title: e.target.title.value,
-              category: e.target.category.value,
-              amount,
-            };
+            if (amount <= 0) {
+              alert("Amount must be greater than 0");
+              return;
+            }
 
-            setTransactions([...transactions, newTransaction]);
-            e.target.reset();
+            if (totalExpenses + amount > BUDGET) {
+              alert("Your Budget is Limit, You're Not Enough");
+              return;
+            }
+
+            try {
+              await axios.post(
+                "http://127.0.0.1:8000/api/transactions/",
+                {
+                  title,
+                  category,
+                  amount,
+                }
+              );
+
+              fetchTransactions(); // refresh after add
+              e.target.reset();
+            } catch (err) {
+              console.log(err);
+              alert("Error saving transaction");
+            }
           }}
           className="flex gap-3"
         >
@@ -109,19 +141,16 @@ function App() {
       {/* CARDS */}
       <div className="grid grid-cols-3 gap-4 mb-6">
 
-        {/* TOTAL EXPENSES */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-gray-500">Total Expenses</h2>
           <p className="text-2xl font-bold">₱ {totalExpenses}</p>
         </div>
 
-        {/* TRANSACTIONS */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-gray-500">Transactions</h2>
           <p className="text-2xl font-bold">{transactions.length}</p>
         </div>
 
-        {/* 💰 BUDGET (NOW DYNAMIC) */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-gray-500">Budget Remaining</h2>
 
@@ -143,7 +172,6 @@ function App() {
       {/* CHARTS */}
       <div className="grid grid-cols-2 gap-5 mb-6">
 
-        {/* PIE CHART */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
             Expenses Pie Chart
@@ -171,7 +199,6 @@ function App() {
           </PieChart>
         </div>
 
-        {/* BAR CHART */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
             Monthly Expenses
@@ -201,6 +228,7 @@ function App() {
               <th className="text-left p-2">Title</th>
               <th className="text-left p-2">Category</th>
               <th className="text-left p-2">Amount</th>
+              <th className="text-left p-2">Action</th>
             </tr>
           </thead>
 
@@ -210,6 +238,14 @@ function App() {
                 <td className="p-2">{item.title}</td>
                 <td className="p-2">{item.category}</td>
                 <td className="p-2">₱ {item.amount}</td>
+                <td className="p-2">
+                  <button
+                    onClick={() => deleteTransaction(item.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
