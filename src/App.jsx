@@ -23,7 +23,7 @@ function App() {
     fetchTransactions();
   }, []);
 
-  // ✅ FETCH
+  // FETCH
   const fetchTransactions = async () => {
     try {
       const res = await axios.get("http://127.0.0.1:8000/api/transactions/");
@@ -33,9 +33,26 @@ function App() {
     }
   };
 
+  // 🔥 DELETE FUNCTION
+  const deleteTransaction = async (id) => {
+    const confirmDelete = window.confirm("Delete this transaction?");
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/transactions/${id}/`
+      );
+
+      fetchTransactions(); // refresh list
+    } catch (err) {
+      console.log(err.response?.data);
+      alert("Failed to delete transaction");
+    }
+  };
+
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-  // ✅ TOTAL
+  // TOTAL
   const totalExpenses = transactions.reduce(
     (total, item) => total + Number(item.amount),
     0
@@ -44,7 +61,7 @@ function App() {
   const remainingBudget = BUDGET - totalExpenses;
   const isOverBudget = remainingBudget <= 0;
 
-  // 🔥 FIXED PIE CHART DATA (IMPORTANT)
+  // PIE DATA
   const summary = [
     {
       name: "Income",
@@ -77,6 +94,12 @@ function App() {
 
             if (!title || !type || !amount) {
               alert("Please fill in all fields!");
+              return;
+            }
+
+            // BLOCK IF OVER BUDGET
+            if (totalExpenses + amount > BUDGET) {
+              alert("Budget exceeded! Cannot add transaction.");
               return;
             }
 
@@ -162,7 +185,6 @@ function App() {
       {/* CHARTS */}
       <div className="grid grid-cols-2 gap-5 mb-6">
 
-        {/* PIE CHART FIXED */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
             Income vs Expense
@@ -190,7 +212,6 @@ function App() {
           </PieChart>
         </div>
 
-        {/* BAR CHART */}
         <div className="bg-white p-5 rounded-xl shadow">
           <h2 className="text-xl font-bold mb-3">
             Expenses by Type
@@ -220,6 +241,7 @@ function App() {
               <th className="text-left p-2">Title</th>
               <th className="text-left p-2">Type</th>
               <th className="text-left p-2">Amount</th>
+              <th className="text-left p-2">Action</th>
             </tr>
           </thead>
 
@@ -229,6 +251,17 @@ function App() {
                 <td className="p-2">{item.title}</td>
                 <td className="p-2">{item.type}</td>
                 <td className="p-2">₱ {item.amount}</td>
+
+                {/* DELETE BUTTON */}
+                <td className="p-2">
+                  <button
+                    onClick={() => deleteTransaction(item.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded"
+                  >
+                    Delete
+                  </button>
+                </td>
+
               </tr>
             ))}
           </tbody>
