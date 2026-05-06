@@ -33,7 +33,7 @@ function App() {
     }
   };
 
-  // 🔥 DELETE FUNCTION
+  // 🔥 DELETE FUNCTION (UPDATED)
   const deleteTransaction = async (id) => {
     const confirmDelete = window.confirm("Delete this transaction?");
     if (!confirmDelete) return;
@@ -43,7 +43,9 @@ function App() {
         `http://127.0.0.1:8000/api/transactions/${id}/`
       );
 
-      fetchTransactions(); // refresh list
+      // ✅ instant update (no refetch)
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+
     } catch (err) {
       console.log(err.response?.data);
       alert("Failed to delete transaction");
@@ -52,11 +54,10 @@ function App() {
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-  // TOTAL
-  const totalExpenses = transactions.reduce(
-    (total, item) => total + Number(item.amount),
-    0
-  );
+  // 🔥 TOTAL (FIXED: expenses only)
+  const totalExpenses = transactions
+    .filter((item) => item.type?.toLowerCase() === "expense")
+    .reduce((total, item) => total + Number(item.amount), 0);
 
   const remainingBudget = BUDGET - totalExpenses;
   const isOverBudget = remainingBudget <= 0;
@@ -252,7 +253,6 @@ function App() {
                 <td className="p-2">{item.type}</td>
                 <td className="p-2">₱ {item.amount}</td>
 
-                {/* DELETE BUTTON */}
                 <td className="p-2">
                   <button
                     onClick={() => deleteTransaction(item.id)}
