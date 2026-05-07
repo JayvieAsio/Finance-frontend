@@ -272,4 +272,7 @@ function App() {
   );
 }
 
+console.log("App component rendered");
+
+
 export default App;
